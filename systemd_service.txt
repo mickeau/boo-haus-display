@@ -1,0 +1,54 @@
+# Boo Haus Display - Systemd Service File
+# Save as: /etc/systemd/system/boo-haus-display.service
+#
+# Installation:
+#   sudo cp boo-haus-display.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable boo-haus-display
+#   sudo systemctl start boo-haus-display
+#
+# Management:
+#   sudo systemctl status boo-haus-display
+#   sudo systemctl stop boo-haus-display
+#   sudo systemctl restart boo-haus-display
+#   sudo journalctl -u boo-haus-display -f
+
+[Unit]
+Description=Boo Haus Admin Display System
+Documentation=https://github.com/yourusername/boo-haus-display
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/boo_haus_display
+
+# Main command - continuous cycling
+ExecStart=/usr/bin/python3 /home/pi/boo_haus_display/boo_haus_main.py --cycle
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=append:/home/pi/boo_haus_display/logs/display.log
+StandardError=append:/home/pi/boo_haus_display/logs/error.log
+
+# Environment
+Environment="PYTHONUNBUFFERED=1"
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/pi/boo_haus_display
+
+# Resource limits (optional)
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

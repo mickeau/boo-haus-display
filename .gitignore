@@ -1,0 +1,89 @@
+# ===================================
+# Boo Haus Display - Git Ignore File
+# ===================================
+
+# Credentials and API Keys
+credentials.json
+token.json
+boo_haus_config.json
+
+# Personal/Sensitive Data
+birthdays.json
+
+# Runtime Generated Files
+display_state.json
+news_display_state.json
+
+# Cache and Data Files
+combined_news_recent.json
+headline_summaries_cache.json
+news_summaries.json
+*.cache
+
+# Generated Images
+display_images/
+*.png
+*.jpg
+*.jpeg
+
+# Logs
+logs/
+*.log
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Temporary Files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Test Files (optional - uncomment if you don't want to track test outputs)
+# test_output/
+# test_results/

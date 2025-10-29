@@ -1,0 +1,82 @@
+{
+  "display": {
+    "width": 800,
+    "height": 480,
+    "cycle_interval_seconds": 300,
+    "save_images": true,
+    "display_on_inky": true,
+    "image_directory": "display_images"
+  },
+  "screens": {
+    "weather": {
+      "enabled": true,
+      "show_tide_times": true,
+      "show_water_quality": true,
+      "show_sewage_alerts": true
+    },
+    "week": {
+      "enabled": true,
+      "forecast_days": 5
+    },
+    "nfl": {
+      "enabled": true
+    },
+    "calendar": {
+      "enabled": true,
+      "days_ahead": 14,
+      "max_events": 10,
+      "calendar_ids": [
+        "REPLACE_WITH_YOUR_CALENDAR_ID_1@group.v.calendar.google.com",
+        "REPLACE_WITH_YOUR_CALENDAR_ID_2@group.calendar.google.com"
+      ]
+    },
+    "news": {
+      "enabled": true,
+      "stories_per_screen": 3,
+      "cache_file": "headline_summaries_cache.json"
+    },
+    "birthday": {
+      "enabled": true,
+      "max_birthdays": 10,
+      "birthday_file": "birthdays.json"
+    }
+  },
+  "special_dates": {
+    "01-01": "Happy New Year!",
+    "14-02": "Happy Valentine's Day!",
+    "25-12": "Merry Christmas!",
+    "26-12": "Happy Boxing Day!",
+    "easter": "Happy Easter!"
+  },
+  "data_refresh": {
+    "news_scraper_hour": 3,
+    "news_scraper_enabled": true,
+    "news_summariser_enabled": true
+  },
+  "buttons": {
+    "enabled": true,
+    "button_a": "previous_screen",
+    "button_b": "next_screen",
+    "button_c": "pause_resume",
+    "button_d": "force_refresh",
+    "show_pause_indicator": true
+  },
+  "locations": {
+    "uprn": "YOUR_UPRN_HERE",
+    "postcode": "YOUR_POSTCODE_HERE",
+    "latitude": 50.0000,
+    "longitude": -3.0000
+  },
+  "api_keys": {
+    "openweather": "YOUR_OPENWEATHER_API_KEY_HERE",
+    "anthropic": "YOUR_ANTHROPIC_API_KEY_HERE"
+  },
+  "state_file": "display_state.json",
+  "_comments": {
+    "api_keys": "Get your free OpenWeather API key from: https://openweathermap.org/api. Anthropic API key is optional and only needed for news summarization.",
+    "calendar_ids": "Find your Google Calendar IDs in Google Calendar settings",
+    "locations": "UPRN is UK Property Reference Number. Postcode, latitude, and longitude are for your location.",
+    "special_dates": "Add your own special dates in DD-MM format (e.g., '21-03': 'Happy Birthday!')",
+    "credentials": "You also need to create credentials.json for Google Calendar API - see installation_guide.md"
+  }
+}
