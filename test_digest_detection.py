@@ -4,7 +4,7 @@ Test script for digest detection
 Run this to verify digest detection logic is working correctly
 """
 
-from config import SITES_CONFIG
+from news_config import SITES_CONFIG
 from digest_detector import DigestDetectorFactory
 
 

@@ -25,6 +25,8 @@
       "enabled": true,
       "days_ahead": 14,
       "max_events": 10,
+      "credentials_file": "credentials.json",
+      "token_file": "token.json",
       "calendar_ids": [
         "REPLACE_WITH_YOUR_CALENDAR_ID_1@group.v.calendar.google.com",
         "REPLACE_WITH_YOUR_CALENDAR_ID_2@group.calendar.google.com"
@@ -33,12 +35,20 @@
     "news": {
       "enabled": true,
       "stories_per_screen": 3,
-      "cache_file": "headline_summaries_cache.json"
+      "raw_story_file": "combined_news_recent.json",
+      "story_file": "news_stories.json",
+      "cache_file": "headline_summaries_cache.json",
+      "state_file": "news_display_state.json",
+      "max_age_days": 7,
+      "max_per_source_per_screen": 2
     },
     "birthday": {
       "enabled": true,
       "max_birthdays": 10,
       "birthday_file": "birthdays.json"
+    },
+    "status": {
+      "enabled": true
     }
   },
   "special_dates": {
@@ -77,6 +87,6 @@
     "calendar_ids": "Find your Google Calendar IDs in Google Calendar settings",
     "locations": "UPRN is UK Property Reference Number. Postcode, latitude, and longitude are for your location.",
     "special_dates": "Add your own special dates in DD-MM format (e.g., '21-03': 'Happy Birthday!')",
-    "credentials": "You also need to create credentials.json for Google Calendar API - see installation_guide.md"
+    "credentials": "You also need to create credentials.json for Google Calendar API - see README.md"
   }
 }

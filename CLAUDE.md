@@ -1,453 +1,384 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file gives coding agents the current operating context for the Boo Haus
+Display repository.
 
 ## Project Overview
 
-Boo Haus Display is a home information display system for Raspberry Pi with Inky Impression 7.3" e-ink display. It cycles through 6 modular screens showing weather, calendar events, news, NFL scores, birthdays, and weekly summaries.
+Boo Haus Display is a Raspberry Pi home information display for a Pimoroni Inky
+Impression 7.3" e-ink display. The app cycles through modular screens for:
 
-## Architecture
+- Weather
+- Week summary
+- NFL
+- Calendar
+- News
+- Birthdays
+- Status
 
-### Core Components
+Main entry point:
 
-**Display Manager** (`boo_haus_main.py`)
-- Orchestrates screen cycling and state management
-- Manages automatic news scraper execution at 3 AM
-- Persists state to `display_state.json`
-- Entry point: `python3 boo_haus_main.py [--once|--cycle|--screen <name>]`
-
-**Base Screen Class** (`base_screen.py`)
-- Abstract base class for all screens
-- Provides common header with pastel blue background (PASTEL_BLUE = (86, 108, 230))
-- Header height: 70px, content starts at y=75
-- Displays special date greetings (configured in `boo_haus_config.json`)
-- Utility methods: `draw_section_title()`, `wrap_text()`, `draw_text_box()`, `draw_weather_icon()`
-- All screens must implement `name` property and `render_content()` method
-
-**Screen Implementations** (`screens/` directory)
-- Each screen inherits from `BaseScreen`
-- Screens can be enabled/disabled via config: `config['screens'][screen_name]['enabled']`
-- Screen order in cycle is determined by order in `BooHausDisplayManager.__init__()`
-- Individual screens: WeatherScreen, WeekScreen, NFLScreen, CalendarScreen, NewsScreen, BirthdayScreen
-
-### Data Architecture
-
-**Data Fetchers** (independent scripts)
-- `weather_fetcher.py` - OpenWeather API integration
-- `bin_collections.py` - East Devon Council waste collection scraper
-- `tide_times.py` - BBC tide data scraper for Exmouth
-- `water_quality.py` - Environment Agency beach water quality
-- `direct_sewage_api.py` - Sewage overflow status
-- `nfl_scores.py` - ESPN NFL data
-- `calendar_fetcher.py` / `calendar_display.py` - Google Calendar integration
-- `news_scraper.py` - RSS feed scraper with digest detection
-- `news_summariser.py` - News summarization pipeline
-
-**News System Architecture**
-- Modular design with separate concerns:
-  - `config.py` - Site-specific selectors and patterns
-  - `date_handler.py` - Date parsing and validation
-  - `digest_detector.py` - Detects digest articles vs regular articles
-  - `digest_parsers.py` - Parses digest content into individual stories
-  - `news_scraper.py` - Main scraper orchestrating above modules
-- News cache: `headline_summaries_cache.json` (consumed by NewsScreen)
-- News display state: `news_display_state.json` (tracks cycling position)
-
-### Configuration System
-
-**Main Config** (`boo_haus_config.json`)
-- `display` - Display dimensions, cycle interval, save/show settings
-- `screens` - Per-screen enable/disable and settings
-- `special_dates` - Format: "DD-MM": "Greeting message"
-- `api_keys` - OpenWeather API key (HARDCODED IN screens/__init__.py:165 - consider refactoring)
-- `locations` - UPRN, postcode, lat/long for local services
-- `data_refresh` - News scraper scheduling
-
-**Birthday Data** (`birthdays.json`)
-- Array of objects: `{"name": "string", "month": int, "day": int}`
-
-## Common Development Tasks
-
-### Testing and Debugging
-
-Run full diagnostics:
 ```bash
-python3 test_display.py
+python3 boo_haus_main.py [--once|--cycle|--screen <name>]
 ```
 
-Test individual screens without e-ink display:
+Use `--cycle` for the systemd service and button support. Use `--screen <name>`
+or `--once` for local checks.
+
+## Current Architecture
+
+### Display Manager
+
+`boo_haus_main.py` owns screen construction, state loading/saving, screen
+cycling, optional button setup, preview image saving, Inky rendering, and daily
+news scraper scheduling.
+
+Important details:
+
+- Screen state is stored at `config.runtime_path('state_file', 'display_state.json')`.
+- Requested dashboard/button screen changes are stored by screen name in
+  `requested_screen`.
+- Button handling is only enabled for cycle mode unless config/environment
+  explicitly disables it.
+- Screen initialization is defensive: one broken optional screen should not
+  prevent the whole app from starting.
+
+### Screens
+
+Screen modules live under `screens/` and inherit from `BaseScreen` in
+`base_screen.py`. `screens/__init__.py` should stay as thin exports only.
+`BaseScreen` owns common text measurement and right-aligned drawing helpers;
+prefer those over repeating `textbbox` width calculations in screen modules.
+Use `draw_section_title_at()` for section headings that need a custom x
+position or underline width; `draw_section_title()` is the standard left-aligned
+wrapper.
+
+Current screen classes:
+
+- `WeatherScreen`
+- `WeekScreen`
+- `NFLScreen`
+- `CalendarScreen`
+- `NewsScreen`
+- `BirthdayScreen`
+- `StatusScreen`
+
+Each screen must implement `name` and `render_content()`.
+
+Older standalone display scripts should not carry their own data/rendering
+pipelines. `calendar_display.py` and `birthday_tracker.py` are compatibility
+CLI wrappers around the maintained fetcher/screen modules. Keep future one-off
+render commands thin in the same way so display behavior has one source of
+truth.
+
+`button_handler.py` should stay hardware-optional and safe to import on
+development machines. Disabled mode must not require `gpiod`; callback failures
+should be logged with traceback and contained so the monitoring thread keeps
+running. Button D intentionally has a longer debounce window than A/B/C.
+
+Broad render guards in `boo_haus_main.py` are intentional at two boundaries:
+individual screen initialization and individual screen rendering. Those guards
+keep one broken optional screen from taking down the whole display. Prefer
+narrower exceptions for predictable file, subprocess, signal, dashboard, and
+parser failures elsewhere.
+
+### Fetchers
+
+Data fetchers are independent modules/scripts:
+
+- `weather_fetcher.py` - OpenWeather One Call API
+- `tide_times.py` - BBC tide table scraping for Exmouth
+- `water_quality.py` - Environment Agency water quality
+- `direct_sewage_api.py` - sewage overflow status
+- `bin_collections.py` - East Devon Council collection scraping
+- `nfl_scores.py` - ESPN NFL scoreboard
+- `calendar_fetcher.py` - Google Calendar API
+- `birthday_fetcher.py` - local birthday JSON
+- `news_scraper.py` - RSS/story scraping and digest splitting
+- `news_summariser.py` - optional Anthropic summary generation
+- `weather_icon_utils.py` - shared weather icon filename mapping and PNG loading
+- `weather_data_utils.py` - shared OpenWeather API normalization for display
+
+Most network fetchers use `BaseFetcher`, which resolves relative cache files
+under the project root and treats empty list/dict responses as valid cacheable
+results. Network fetch paths should use `http_get()`, `http_get_json()`, or
+`http_get_text()` from `base_fetcher.py` so timeout handling, the shared user
+agent, offline test mode, and sanitized request logging stay consistent. The
+display fetchers currently migrated to this path are weather, tides, NFL, water
+quality, sewage, and bin collections. The news RSS fetcher, article scraper,
+and digest parsers also use the shared helper.
+
+Fetcher source methods should return `None` for network, API, or parser
+failures so `BaseFetcher` can fall back to stale cache. Return an empty list or
+dict only when a successful response genuinely contains no data.
+Local-file fetchers follow the same rule: unreadable or invalid files should
+return `None` so stale cache survives, while a valid empty file can return an
+empty list. `BirthdayFetcher` is the shared path for both birthday display and
+week-screen birthday events.
+
+`bin_collections.py` uses East Devon's current autocomplete endpoint,
+`/repositories/hidden-pages/address-finder/?qtype=bins&term=<postcode>`.
+The older `/addressfinder?qtype=bins` endpoint now returns 404. For bin
+collections, an empty HTML parse should be treated as `None` rather than `[]`,
+because a successful address result with no parsed date rows usually means the
+site markup changed and should not overwrite a useful cache. A stale cache with
+`"data": []` will make the week screen show "No bin data available" until the
+fixed fetcher successfully refreshes `bin_collections_cache.json`.
+
+## Configuration
+
+Runtime configuration is loaded by `config.py`:
+
+- `boo_haus_config.example.json` provides default values.
+- `boo_haus_config.json` overlays local/private values when present.
+- `.env` is loaded for local secrets without overriding process environment
+  variables.
+- `BOO_HAUS_CONFIG_FILE` can point to an alternate local config file.
+- `OPENWEATHER_API_KEY` overrides `api_keys.openweather`.
+- `ANTHROPIC_API_KEY` overrides `api_keys.anthropic`.
+- Missing local config should not auto-create `boo_haus_config.json`.
+- Relative runtime paths must be resolved with `config.runtime_path(...)` or
+  `config.resolve_path(...)`.
+- Placeholder values such as `YOUR_...`, `REPLACE_WITH_...`, `changeme`, and
+  blank strings must not be treated as configured secrets.
+
+Use `.env` for simple API keys only. Do not move Google Calendar OAuth JSON into
+environment variables. Keep Google auth as local ignored files because
+`credentials.json` is structured JSON and `token.json` may be refreshed/replaced
+by the Google client library. Their paths are configured with:
+
+- `screens.calendar.credentials_file`
+- `screens.calendar.token_file`
+
+Sensitive local files are intentionally ignored by git:
+
+- `.env`
+- `boo_haus_config.json`
+- `credentials.json`
+- `token.json`
+- `birthdays.json`
+
+Use `.env.example` as the template for local API key setup.
+
+`add_birthday.py` is the maintained birthday editor. By default it writes to the
+configured `screens.birthday.birthday_file`, sanitizes malformed rows, and saves
+with an atomic file replace.
+
+Dependency references:
+
+- `requirements.txt` contains base packages for local/runtime checks.
+- `requirements-optional.txt` contains optional integrations for Anthropic,
+  Google Calendar, GPIO buttons, and the Inky display.
+- `quick_start.sh` uses `requirements.txt` for base installs and prompts for
+  optional Google, Anthropic, and Inky/GPIO packages.
+
+Do not print API keys, calendar tokens, credentials, or full URLs containing
+secrets. Weather request errors must pass through `redact_weather_error()` before
+logging.
+
+## News Pipeline
+
+The news code now separates source-specific configuration from app runtime
+configuration:
+
+- `news_config.py` - RSS source definitions, digest patterns, selectors, and
+  scraper settings
+- `news_models.py` - shared story normalization, stable IDs, sorting, fallback
+  summaries, and display-record extraction
+- `digest_detector.py` - identifies digest articles
+- `digest_parsers.py` - splits digest articles into individual stories
+- `news_scraper.py` - fetches RSS entries, scrapes regular stories, expands
+  digest articles, deduplicates, and writes the raw story database
+- `news_summariser.py` - optionally summarizes raw stories into display-ready
+  summaries
+- `screens/news_screen.py` - prefers display-ready summaries, then raw story
+  database, then legacy files
+
+Digest articles are expected to be chopped into individual story records before
+they enter the display pipeline. Deduplication should happen by stable story ID
+where possible, with URL/title fallback.
+
+Default configured news files:
+
+- Raw story database: `combined_news_recent.json`
+- Display summaries: `news_stories.json`
+- Legacy summaries: `news_summaries.json`
+- Summary cache: `headline_summaries_cache.json`
+- News display state: `news_display_state.json`
+
+## Dashboard And Services
+
+`web_dashboard.py` is a small Flask dashboard. By default it binds to localhost:
+
 ```bash
+python3 web_dashboard.py
+```
+
+Set these only when remote access is intended:
+
+```bash
+BOO_HAUS_DASHBOARD_HOST=0.0.0.0
+BOO_HAUS_DASHBOARD_PORT=5000
+```
+
+The dashboard uses the configured state, log, and image paths. It writes screen
+requests by screen name so changing enabled screen order does not break "Show
+Now".
+
+Systemd files:
+
+- `boo-haus-display.service`
+- `boo-haus-dashboard.service`
+- `install_service.sh`
+- `DEPLOYMENT_CHECKLIST.md`
+
+`install_service.sh` installs the display service by default. Use
+`sudo ./install_service.sh --dashboard` to also install the dashboard service,
+and `--no-start` when you want files installed/enabled without immediately
+starting services. Both generated service files include
+`EnvironmentFile=-<install-dir>/.env`.
+
+After code or config changes are deployed on the Pi, restart the relevant
+service:
+
+```bash
+sudo systemctl restart boo-haus-display
+sudo systemctl restart boo-haus-dashboard
+```
+
+Use `DEPLOYMENT_CHECKLIST.md` before updating the Pi checkout. It lists the
+private files to preserve, recommended `rsync` excludes, post-copy checks, and
+rollback commands. Do not run those deployment steps unless Mike explicitly asks
+for Pi update/deployment work.
+
+## Testing
+
+Run syntax checks for touched Python files:
+
+```bash
+python3 -m py_compile config.py boo_haus_main.py web_dashboard.py
+```
+
+Focused regression tests:
+
+```bash
+python3 test_config_handling.py
+python3 test_backup_restore.py
+python3 test_fetcher_behaviour.py
+python3 test_news_pipeline.py
+python3 test_runtime_behaviour.py
+python3 test_runtime_edge_cases.py
+python3 test_screen_fixtures.py
+python3 test_health_check.py
+python3 test_service_install_files.py
 python3 test_display.py --quick
+bash -n install_service.sh quick_start.sh install_all_deps.sh
 ```
 
-Test specific screen:
+`test_screen_fixtures.py` renders all seven screens with deterministic fixture
+data and records text draw calls, so layout/data-contract regressions can be
+caught without live APIs or image OCR. It also covers weather data
+normalization and malformed row/file handling for weather, week, calendar, NFL,
+and news adapters.
+
+`test_fetcher_behaviour.py` covers shared cache and network behavior, including
+offline mode, stale-cache fallback, invalid cache timestamps, malformed cache
+roots, secret redaction, cacheable empty-list responses, and malformed source
+payloads for the sewage, NFL, bin collection, and water-quality fetchers. It
+also covers birthday local-file failure behavior and birthday event
+normalization.
+
+`test_runtime_behaviour.py` covers service-mode control paths, the optional
+Google Calendar integration boundary, malformed calendar API events, and import
+behavior for the legacy display wrapper CLIs.
+
+`test_runtime_edge_cases.py` covers utility-level behavior for hardware-optional
+button handling, button debouncing/callback containment, birthday editor
+sanitization/atomic saves, stricter URL date extraction, and dashboard edge
+handling.
+
+Manual helpers `test_buttons.py` and `check_rss_dates.py` are retained as
+diagnostics. They should remain import-light, config-driven where possible, and
+safe to syntax-check on development machines without GPIO or live network
+access.
+
+`waste_collections.json` is local generated runtime output and can contain UPRN
+and postcode data. Keep it ignored and do not use it as a committed fixture.
+
+`test_health_check.py` covers health-check parsing for raw news story databases,
+timezone-aware display state timestamps, offline data-source checks, and
+machine-readable `--json` output.
+
+`test_service_install_files.py` statically checks that service files and install
+scripts keep `.env`, display cycle mode, dashboard service wiring, and installer
+flags aligned.
+
+Screen data adapters should prefer targeted handling for malformed records:
+skip bad rows/files with a warning, keep rendering valid nearby data, and reserve
+whole-screen fallback messages for missing data or real rendering failures.
+
+Manual app checks:
+
 ```bash
 python3 boo_haus_main.py --screen weather
 python3 boo_haus_main.py --screen week
-# Options: weather, week, nfl, calendar, news, birthday
+python3 boo_haus_main.py --screen nfl
+python3 boo_haus_main.py --screen calendar
+python3 boo_haus_main.py --screen news
+python3 boo_haus_main.py --screen birthday
+python3 boo_haus_main.py --screen status
 ```
 
-Display next screen once:
-```bash
-python3 boo_haus_main.py --once
-```
-
-Run continuous cycling (Ctrl+C to stop):
-```bash
-python3 boo_haus_main.py --cycle
-```
-
-### Manual Data Fetcher Testing
-
-Test individual data sources:
-```bash
-python3 weather_fetcher.py
-python3 bin_collections.py
-python3 tide_times.py
-python3 nfl_scores.py
-python3 news_scraper.py
-python3 news_summariser.py
-```
-
-### Installation and Setup
-
-Run quick setup (creates directories, installs dependencies):
-```bash
-chmod +x quick_start.sh
-./quick_start.sh
-```
-
-Install all dependencies manually:
-```bash
-pip3 install pillow requests beautifulsoup4 feedparser pytz
-pip3 install inky[rpi,example-depends]  # Raspberry Pi only
-pip3 install google-auth-httplib2 google-auth-oauthlib google-api-python-client  # Optional: Google Calendar
-```
-
-### Monitoring and Logs
-
-View logs:
-```bash
-tail -f logs/display.log
-tail -f logs/scraper.log
-tail -f logs/summariser.log
-```
-
-Check display state:
-```bash
-cat display_state.json
-```
-
-Check saved images:
-```bash
-ls -lht display_images/
-```
-
-## Important Implementation Details
-
-### Screen Rendering Flow
-1. `BooHausDisplayManager.display_screen()` calls `screen.render()`
-2. `BaseScreen.render()` creates new image, calls `draw_header()`, then `render_content()`
-3. Each screen implements `render_content()` to draw content area below header
-4. Image saved to `display_images/` and optionally displayed on Inky
-
-### State Management
-- `display_state.json`: Tracks current screen index and last update time
-- `news_display_state.json`: Tracks which news stories have been shown
-- State is loaded on startup and saved after each screen update
-
-### Special Date Handling
-- Format in config: `"DD-MM": "Greeting message"` (e.g., "25-12": "Merry Christmas!")
-- `BaseScreen.get_special_greeting()` checks current date against config
-- Special greeting displayed centered in header on white text over pastel blue
-
-### Color Palette
-Defined in `BaseScreen`:
-- BLACK = (0, 0, 0)
-- WHITE = (255, 255, 255)
-- RED = (255, 0, 0)
-- YELLOW = (255, 255, 0)
-- ORANGE = (255, 140, 0)
-- GREEN = (0, 255, 0)
-- BLUE = (0, 0, 255)
-- PINK = (255, 192, 203)
-- PALE_GREEN = (200, 255, 200)
-- PASTEL_BLUE = (86, 108, 230) - Used for header background
-
-### Font Sizes (Increased from original)
-- `font_title`: 30pt (was 26)
-- `font_large`: 28pt (was 24)
-- `font_medium`: 22pt (was 18)
-- `font_small`: 18pt (was 14)
-- `font_tiny`: 14pt (was 12)
-- `font_special`: 24pt (for special day messages)
-
-## Adding a New Screen
-
-1. Create new file in `screens/` directory (e.g., `screens/my_screen.py`)
-2. Import and inherit from `BaseScreen`
-3. Implement `name` property returning screen identifier
-4. Implement `render_content()` method
-5. Add import to `screens/__init__.py`
-6. Add to screen list in `boo_haus_main.py` (line 41-47)
-7. Add config section to `boo_haus_config.json`
-8. Test with `python3 boo_haus_main.py --screen my_screen`
-
-## Configuration Architecture
-
-All sensitive data (API keys, location data, calendar IDs) are now loaded from `boo_haus_config.json`:
-
-- **API Keys**: `config['api_keys']['openweather']` - OpenWeather API key
-- **Location Data**: `config['locations']['uprn']`, `config['locations']['postcode']` - UK property data
-- **Calendar IDs**: `config['screens']['calendar']['calendar_ids']` - Google Calendar identifiers
-
-**Note**: The actual config file (`boo_haus_config.json`) is excluded from version control. Use `boo_haus_config.example.json` as a template.
-
-## Automatic Scheduling
-
-### Systemd Service (Recommended)
-
-The preferred method is running as a systemd service for automatic startup on boot.
-
-**Installation:**
-```bash
-cd ~/boo_haus_display
-chmod +x install_service.sh
-# If file has Windows line endings, convert first:
-dos2unix install_service.sh
-sudo ./install_service.sh
-```
-
-**Service Management:**
-```bash
-# Check status
-sudo systemctl status boo-haus-display
-
-# Start/stop/restart
-sudo systemctl start boo-haus-display
-sudo systemctl stop boo-haus-display
-sudo systemctl restart boo-haus-display
-
-# Enable/disable autostart on boot
-sudo systemctl enable boo-haus-display
-sudo systemctl disable boo-haus-display
-
-# View logs
-tail -f ~/boo_haus_display/logs/display.log
-sudo journalctl -u boo-haus-display -f
-```
-
-**After Making Code Changes:**
-Always restart the service to apply changes:
-```bash
-sudo systemctl restart boo-haus-display
-```
-
-**Service Benefits:**
-- Runs automatically on boot
-- Auto-restarts on failure
-- Background operation (no SSH session needed)
-- Buttons work normally
-- Can still SSH in to make edits
-
-**Service Files:**
-- Service definition: `/etc/systemd/system/boo-haus-display.service`
-- Installation script: `install_service.sh`
-- Documentation: `SERVICE_GUIDE.md`
-
-### Cron Setup (Alternative)
-
-For simpler scheduled updates without continuous running:
-
-```cron
-# Update display every 5 minutes
-*/5 * * * * cd /home/pi/boo_haus_display && /usr/bin/python3 boo_haus_main.py --once >> logs/display.log 2>&1
-
-# Run news scraper daily at 3 AM
-0 3 * * * cd /home/pi/boo_haus_display && /usr/bin/python3 news_scraper.py >> logs/scraper.log 2>&1
-
-# Run news summariser daily at 3:30 AM
-30 3 * * * cd /home/pi/boo_haus_display && /usr/bin/python3 news_summariser.py >> logs/summariser.log 2>&1
-```
-
-**Note:** Buttons do NOT work with cron method (only with systemd service using `--cycle` mode)
-
-## Button Functionality
-
-### Button Handler System
-
-The Inky Impression 7.3" has 4 side-mounted buttons that are fully integrated:
-
-**Button Mapping** (GPIO pins):
-- **Button A** (GPIO 5): Previous screen - Navigate backward through screen cycle
-- **Button B** (GPIO 6): Next screen - Navigate forward through screen cycle
-- **Button C** (GPIO 16): Pause/Resume - Toggle automatic cycling on/off
-- **Button D** (GPIO 24): Force refresh - Update current screen with fresh data
-
-**Implementation:**
-- `button_handler.py` - Handles GPIO button detection using `gpiod` library
-- Button callbacks registered in `BooHausDisplayManager._setup_button_handler()`
-- Background thread monitors button presses continuously
-- When paused, yellow "⏸ PAUSED" indicator appears in top-right of display
-
-**Configuration:**
-```json
-"buttons": {
-  "enabled": true,
-  "show_pause_indicator": true
-}
-```
-
-**Testing buttons:**
-```bash
-python3 button_handler.py  # Test button detection standalone
-```
-
-**Requirements:**
-- `gpiod` library (Python bindings for libgpiod)
-- Install: `pip3 install gpiod`
-- Only works on Raspberry Pi with GPIO access
-
-### Button State Management
-
-- `is_paused` flag tracks pause state
-- Button actions update display immediately
-- State persists only during runtime (resets on restart)
-- Pause state respected in `run_continuous()` method
-
-## Key Files Reference
-
-### Core Application
-- `boo_haus_main.py` (420+ lines) - Main application controller with button integration
-- `base_screen.py` (297 lines) - Abstract base for all screens
-- `button_handler.py` (260+ lines) - GPIO button handling with gpiod and debouncing
-- `screens/__init__.py` (621 lines) - All screen implementations
-- `boo_haus_config.json` - System configuration including button settings
-
-### Service & Deployment
-- `install_service.sh` - Systemd service installer script
-- `boo-haus-display.service` - Systemd service definition file
-- `SERVICE_GUIDE.md` - Complete service management documentation
-
-### Testing & Utilities
-- `test_display.py` - Comprehensive testing suite
-- `test_buttons.py` - Button hardware diagnostic tool
-- `health_check.py` - System health monitoring
-- `backup_restore.py` - Backup and restore utilities
-
-### Documentation
-- `CLAUDE.md` - This file - technical documentation for developers
-- `BUTTON_GUIDE.md` - Button functionality user guide
-- `SERVICE_GUIDE.md` - Service management guide
-- `boo_haus_readme.md` - Main project README
-- `installation_guide.md` - Installation instructions
-- `project_summary.md` - Project overview
-- `file_manifest.md` - File reference guide
-
-## Development Workflow
-
-### When Service is Running
-
-The typical workflow when the service is installed and running:
+Diagnostics:
 
 ```bash
-# 1. SSH into the Pi
-ssh pi@your-pi-address
-
-# 2. Stop the service (optional but recommended)
-sudo systemctl stop boo-haus-display
-
-# 3. Make your changes
-cd ~/boo_haus_display
-nano boo_haus_config.json
-# or edit Python files
-
-# 4. Test changes manually (optional)
-python3 boo_haus_main.py --once
-
-# 5. Restart the service
-sudo systemctl restart boo-haus-display
-
-# 6. Monitor logs to verify
-tail -f ~/boo_haus_display/logs/display.log
+python3 health_check.py
+python3 health_check.py --skip-network
+python3 health_check.py --skip-network --json
 ```
 
-### Quick Changes Without Stopping Service
+In sandboxed/offline environments, `health_check.py` and live script runs may
+report external weather, tide, bin, news, or NFL fetch failures unless
+`--skip-network` or `BOO_HAUS_OFFLINE=1` is used. `test_display.py --quick`
+sets `BOO_HAUS_OFFLINE=1`, so display fetchers must render fallback/cache
+states without making live network calls. `test_news_pipeline.py` includes a
+regression check that the news RSS fetch path also obeys `BOO_HAUS_OFFLINE`.
 
-For small config changes, you can edit and restart in one go:
+## Backup And Restore
+
+Use `backup_restore.py` for local backups:
+
 ```bash
-nano boo_haus_config.json
-sudo systemctl restart boo-haus-display
+python3 backup_restore.py --backup
+python3 backup_restore.py --backup --include-images --include-logs
+python3 backup_restore.py --list
+python3 backup_restore.py --restore backups/<file>.tar.gz --dry-run
 ```
 
-The service will:
-- Stop the old process
-- Start a new process with updated code/config
-- Resume from the current screen position (from state file)
+Restore validates tar members before extraction and rejects path traversal,
+symlinks, hard links, and device entries.
 
-### Testing Changes Without Service
+## Development Rules For This Repo
 
-To test without interfering with the service:
-```bash
-# Stop service temporarily
-sudo systemctl stop boo-haus-display
+- Prefer existing project patterns over broad rewrites.
+- During this review, keep work local to repository files. Do not restart
+  systemd services, copy files to the e-ink device, or otherwise deploy changes
+  unless Mike explicitly asks for deployment/update advice.
+- Keep runtime file paths config-driven and project-root-relative.
+- Keep optional integrations optional: missing Google Calendar, Anthropic,
+  Flask, Inky, or GPIO packages should not break unrelated screens/tests.
+- Do not commit generated runtime files, caches, logs, image previews, local
+  config, tokens, or credentials.
+- Use `rg` for searching.
+- Use `apply_patch` for manual edits.
+- Be careful with the existing dirty worktree. Many files may already be
+  modified or untracked; do not revert unrelated changes.
 
-# Test your changes
-python3 boo_haus_main.py --cycle
-# Press Ctrl+C when done
+## Known Remaining Review Targets
 
-# Restart service
-sudo systemctl start boo-haus-display
-```
+These are good next audit/refactor targets:
 
-### File Transfer Methods
-
-**Using SCP (from your local machine):**
-```bash
-scp button_handler.py pi@your-pi:/home/pi/boo_haus_display/
-scp boo_haus_config.json pi@your-pi:/home/pi/boo_haus_display/
-```
-
-**Using SFTP/WinSCP:** Connect and drag-and-drop files
-
-**Converting Windows Line Endings:**
-If you transfer scripts from Windows, always convert line endings:
-```bash
-dos2unix filename.sh
-# or
-sed -i 's/\r$//' filename.sh
-```
-
-## Development Environment
-
-Target platform: Raspberry Pi (3/4/5 or Zero W) with Raspbian/Raspberry Pi OS
-Display: Pimoroni Inky Impression 7.3" (800x480px, 7-color e-ink)
-Python: 3.7+
-Dependencies: See `quick_start.sh` or `installation_guide.md`
-
-## Notes for Future Development
-
-### Known Implementation Details
-
-- **Sleep Interval:** The `run_continuous()` method breaks the cycle interval into 1-second sleeps to allow responsive button handling. This is critical for button functionality during the 300-second wait period.
-
-- **Button Debouncing:** Button D has a longer debounce time (2 seconds vs 0.5 seconds for A/B/C) to prevent false triggers caused by electrical interference during display refreshes. The display refresh takes ~27 seconds and can cause GPIO noise.
-
-- **Thread Safety:** Button callbacks run in a background thread. The `button_action_pending` flag is used to coordinate between the button thread and main loop.
-
-- **State Persistence:** The display position is saved to `display_state.json` after each update. Service restarts will resume from the last position.
-
-### Code-Specific Notes
-
-- News scraper has sophisticated digest detection (see `digest_detector.py` and `config.py`)
-- Calendar and news screens use existing display modules (`calendar_display.py`, `news_display.py`) and paste content area into base screen layout
-- Water quality and sewage data are UK-specific (East Devon/Exmouth)
-- Bin collection scraper is specific to East Devon Council
-- Consider refactoring hardcoded API keys and location data from `screens/__init__.py` into config
-
-### Common Gotchas
-
-1. **Windows Line Endings:** Scripts transferred from Windows must be converted with `dos2unix` or they won't execute on Linux
-2. **GPIO Permissions:** User must be in `gpio` group for button functionality
-3. **Service vs Manual:** Buttons only work in `--cycle` mode (used by service), not in `--once` mode (used by cron)
-4. **Display Refresh Time:** Inky display refresh takes ~10-15 seconds, during which button presses may queue up (handled by debouncing)
+- Continue replacing broad `except Exception` logging with narrower exception
+  handling in lower-risk display adapters where it affects runtime recovery or
+  hides schema drift. The broad catches in display manager screen
+  initialization/rendering and button callback containment are intentional.

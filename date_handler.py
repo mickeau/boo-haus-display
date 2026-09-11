@@ -60,7 +60,7 @@ class DateHandler:
             
             return dt
             
-        except Exception as e:
+        except (AttributeError, TypeError, ValueError) as e:
             logger.debug(f"Could not parse ISO date '{date_str}': {e}")
             return None
     
@@ -85,7 +85,7 @@ class DateHandler:
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             logger.debug(f"Could not parse date '{date_str}' with format '{format_str}': {e}")
             return None
     
@@ -102,15 +102,35 @@ class DateHandler:
         Returns:
             ISO format date string or None
         """
+        if not url or not pattern:
+            return None
+
         try:
             match = re.search(pattern, url)
-            if match:
-                day, month_name, year = match.groups()
-                month_num = month_map.get(month_name.lower(), 1)
-                dt = datetime(int(year), month_num, int(day), tzinfo=timezone.utc)
-                return dt.isoformat()
+        except (TypeError, re.error) as e:
+            logger.debug(f"Could not apply date pattern to URL '{url}': {e}")
             return None
-        except Exception as e:
+
+        if not match:
+            return None
+
+        groups = match.groups()
+        if len(groups) < 3:
+            logger.debug(f"Date pattern for URL '{url}' must capture day, month, and year")
+            return None
+
+        day, month_name, year = groups[:3]
+
+        try:
+            month_num = month_map[month_name.lower()]
+        except (AttributeError, KeyError, TypeError) as e:
+            logger.debug(f"Could not map month '{month_name}' from URL '{url}': {e}")
+            return None
+
+        try:
+            dt = datetime(int(year), month_num, int(day), tzinfo=timezone.utc)
+            return dt.isoformat()
+        except (TypeError, ValueError) as e:
             logger.debug(f"Could not extract date from URL '{url}': {e}")
             return None
     

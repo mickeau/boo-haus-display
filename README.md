@@ -1,207 +1,162 @@
-# 🏠 Boo Haus Display
+# Boo Haus Display
 
-> A modular, extensible e-ink display system for Raspberry Pi with Inky Impression 7.3" display
+A modular home information display for a Raspberry Pi with a Pimoroni Inky
+Impression 7.3" e-ink display.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
-[![Platform: Raspberry Pi](https://img.shields.io/badge/platform-Raspberry%20Pi-red.svg)](https://www.raspberrypi.org/)
+## Screens
 
-Perfect for home dashboards showing weather, calendar events, news, NFL scores, birthdays, and more!
+- Weather, tides, beach water quality, and sewage status
+- Week summary with forecast, waste collections, and celebrations
+- NFL scores and schedules
+- Google Calendar events
+- Positive news feed
+- Birthdays
+- System status
 
-## ✨ Features
-
-- **6 Built-in Information Screens** - Weather, Calendar, News, NFL Scores, Weekly Forecast, Birthdays
-- **Physical Button Controls** - 4 side-mounted buttons for navigation and control
-- **Auto-Cycling Display** - Automatically rotates through enabled screens
-- **Special Date Greetings** - Custom messages for birthdays, holidays, and anniversaries
-- **Systemd Service Support** - Runs automatically on boot
-- **Modular Architecture** - Easy to add custom screens
-- **Privacy-First** - Config files with sensitive data excluded from repository
-
-## 📸 Hardware
-
-- **Display:** Pimoroni Inky Impression 7.3" (800x480px, 7-color e-ink)
-- **Platform:** Raspberry Pi (3/4/5 or Zero W)
-- **OS:** Raspberry Pi OS / Raspbian
-- **Buttons:** 4 built-in GPIO buttons (Previous, Next, Pause, Refresh)
-
-## 🚀 Quick Start
-
-### 1. Clone Repository
+## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/boo-haus-display.git
-cd boo-haus-display
-```
-
-### 2. Run Installation Script
-
-```bash
+git clone <repo-url> boo_haus_display
+cd boo_haus_display
 chmod +x quick_start.sh
 ./quick_start.sh
 ```
 
-### 3. Set Up Configuration
+For an existing checkout, the minimum local setup is:
 
 ```bash
-# Copy example configs and customize with your data
+pip3 install --user -r requirements.txt
 cp boo_haus_config.example.json boo_haus_config.json
+cp .env.example .env
 cp birthdays.example.json birthdays.json
-
-# Edit with your API keys and personal data
-nano boo_haus_config.json
+chmod 600 .env
 ```
 
-**You'll need:**
-- OpenWeather API key (free from [openweathermap.org](https://openweathermap.org/api))
-- Google Calendar credentials (optional - for calendar features)
-- Your location coordinates
-
-### 4. Test
+Optional integrations are listed in `requirements-optional.txt`. Install the
+parts you use, or install the whole file on the Raspberry Pi:
 
 ```bash
-# Test a single screen
-python3 boo_haus_main.py --screen weather
+pip3 install --user -r requirements-optional.txt
+```
 
-# Start cycling
+Edit `.env` for simple API keys:
+
+```bash
+OPENWEATHER_API_KEY=...
+ANTHROPIC_API_KEY=...
+```
+
+Edit `boo_haus_config.json` for location, screen settings, calendar IDs, and
+runtime paths. Google Calendar uses local OAuth files, not environment
+variables:
+
+- `credentials.json`
+- `token.json`
+
+## Running
+
+Render one named screen:
+
+```bash
+python3 boo_haus_main.py --screen weather
+python3 boo_haus_main.py --screen week
+python3 boo_haus_main.py --screen status
+```
+
+Render the next enabled screen once:
+
+```bash
+python3 boo_haus_main.py --once
+```
+
+Run continuous cycling, which is what the display service uses:
+
+```bash
 python3 boo_haus_main.py --cycle
 ```
 
-### 5. Install as Service
+## Services
+
+Install the display service:
 
 ```bash
-# For automatic startup on boot
 sudo ./install_service.sh
 ```
 
-## 📖 Full Documentation
+Install the display and dashboard services:
 
-- **[Complete README](boo_haus_readme.md)** - Full features and configuration guide
-- **[Installation Guide](installation_guide.md)** - Detailed setup instructions
-- **[Button Guide](BUTTON_GUIDE.md)** - How to use physical buttons
-- **[Service Guide](SERVICE_GUIDE.md)** - Managing the systemd service
-- **[Developer Guide](CLAUDE.md)** - Technical documentation for developers
-
-## ⚙️ Configuration
-
-All configuration is in `boo_haus_config.json`:
-
-```json
-{
-  "display": {
-    "cycle_interval_seconds": 300
-  },
-  "screens": {
-    "weather": {"enabled": true},
-    "calendar": {"enabled": true},
-    "news": {"enabled": true},
-    "nfl": {"enabled": false}
-  },
-  "api_keys": {
-    "openweather": "YOUR_API_KEY_HERE"
-  }
-}
+```bash
+sudo ./install_service.sh --dashboard
 ```
 
-## 🔘 Button Controls
+Install without starting services:
 
-- **Button A** - Previous screen
-- **Button B** - Next screen
-- **Button C** - Pause/Resume auto-cycling
-- **Button D** - Force refresh current screen
-
-## 🎨 Included Screens
-
-1. **Weather** - Current conditions, 5-day forecast, tide times, water quality
-2. **This Week** - 5-day forecast, bin collections, upcoming birthdays
-3. **NFL Scores** - Live scores and schedules
-4. **Calendar** - Upcoming Google Calendar events
-5. **News** - Daily news summaries
-6. **Birthdays** - Upcoming birthday tracker
-
-## 🔒 Privacy & Security
-
-**Important:** This repository excludes files with sensitive data:
-
-- `boo_haus_config.json` - Contains API keys and location data
-- `birthdays.json` - Personal birthday information
-- `credentials.json` - Google OAuth credentials
-- `token.json` - Authentication tokens
-
-Use the provided `.example.json` files as templates. See `.gitignore` for full list.
-
-## 🛠️ System Requirements
-
-### Software
-- Python 3.7+
-- Pillow (image processing)
-- Inky library (for e-ink display)
-- gpiod (for button support)
-- Requests, BeautifulSoup4, feedparser (for data fetching)
-- Google Calendar API libraries (optional)
-
-### Hardware (Recommended)
-- Raspberry Pi 4 or 5
-- Inky Impression 7.3" display
-- Power supply (official Raspberry Pi PSU recommended)
-- MicroSD card (16GB+)
-
-## 📊 Project Structure
-
-```
-boo_haus_display/
-├── boo_haus_main.py           # Main application
-├── base_screen.py             # Base screen class
-├── button_handler.py          # GPIO button handling
-├── boo_haus_config.json       # Your config (not in repo)
-├── boo_haus_config.example.json  # Config template
-├── screens/                   # Screen implementations
-│   ├── weather_screen.py
-│   ├── calendar_screen.py
-│   └── ...
-├── install_service.sh         # Systemd installer
-└── [data fetchers]            # Data source scripts
+```bash
+sudo ./install_service.sh --dashboard --no-start
 ```
 
-## 🤝 Contributing
+See [SERVICE_GUIDE.md](SERVICE_GUIDE.md) for service management commands.
+Use [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) when updating an existing
+Pi checkout while preserving local secrets and runtime data.
 
-Contributions welcome! To add a new screen:
+## Testing
 
-1. Create a class inheriting from `BaseScreen`
-2. Implement `name` property and `render_content()` method
-3. Add to screen list in `boo_haus_main.py`
-4. Test thoroughly
-5. Submit a pull request
+Focused regression checks:
 
-See [Developer Guide](CLAUDE.md) for detailed instructions.
+```bash
+python3 test_config_handling.py
+python3 test_backup_restore.py
+python3 test_fetcher_behaviour.py
+python3 test_news_pipeline.py
+python3 test_runtime_behaviour.py
+python3 test_screen_fixtures.py
+python3 test_health_check.py
+python3 test_service_install_files.py
+```
 
-## 📄 License
+Render all screens without updating the e-ink display:
 
-This project is open source. Please comply with:
-- OpenWeather API terms of service
-- Google Calendar API terms of service
-- Third-party data source terms
+```bash
+python3 test_display.py --quick
+```
 
-## 🆘 Support
+Diagnostics:
 
-**Issues?**
-1. Check [Troubleshooting](boo_haus_readme.md#troubleshooting) section
-2. Review logs: `tail -f ~/boo_haus_display/logs/display.log`
-3. Test components individually
-4. Verify configuration
+```bash
+python3 health_check.py --skip-network
+python3 health_check.py --skip-network --json
+```
 
-**Component Support:**
-- [Pimoroni Support](https://support.pimoroni.com/) - Inky Display
-- [Google Calendar API](https://developers.google.com/calendar) - Calendar integration
-- [OpenWeather API](https://openweathermap.org/api) - Weather data
+## Data Fetchers
 
-## 🙏 Acknowledgments
+Individual fetchers can be run directly when investigating data-source issues:
 
-Built with:
-- [Pimoroni Inky Impression](https://shop.pimoroni.com/products/inky-impression) - E-ink display
-- [Pillow](https://python-pillow.org/) - Image processing
-- [OpenWeatherMap](https://openweathermap.org/) - Weather data
+```bash
+python3 weather_fetcher.py
+python3 bin_collections.py
+python3 tide_times.py
+python3 news_scraper.py
+python3 news_summariser.py
+```
 
----
+Most network fetchers use the shared helper in `base_fetcher.py` for timeouts,
+offline mode, user-agent handling, and secret-safe request logging.
 
-Made with ❤️ for the Boo Haus family
+## Local Files
+
+These files are private/local and should not be committed:
+
+- `.env`
+- `boo_haus_config.json`
+- `credentials.json`
+- `token.json`
+- `birthdays.json`
+- `waste_collections.json`
+- runtime caches, logs, generated news data, and generated display images
+
+## Documentation
+
+- [BUTTON_GUIDE.md](BUTTON_GUIDE.md)
+- [SERVICE_GUIDE.md](SERVICE_GUIDE.md)
+- [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)
+- [CLAUDE.md](CLAUDE.md)

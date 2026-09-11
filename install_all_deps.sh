@@ -16,13 +16,14 @@ sudo apt-get install -y \
     python3-requests \
     python3-bs4 \
     python3-feedparser \
+    python3-flask \
     python3-tz \
     python3-pip
 
 # Install packages only available via pip
 echo ""
 echo "Installing pip packages..."
-sudo pip3 install --break-system-packages inky[rpi,example-depends]
+sudo pip3 install --break-system-packages gpiod inky[rpi,example-depends]
 
 # Ask about Google Calendar
 echo ""
@@ -35,6 +36,16 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         google-auth-oauthlib \
         google-api-python-client
     echo "✓ Google Calendar support installed"
+fi
+
+# Ask about Anthropic summaries
+echo ""
+read -p "Install Anthropic support for news summaries? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Installing Anthropic package..."
+    sudo pip3 install --break-system-packages anthropic
+    echo "✓ Anthropic support installed"
 fi
 
 # Test installation
@@ -52,7 +63,9 @@ test_packages = {
     'requests': 'requests',
     'bs4': 'beautifulsoup4',
     'feedparser': 'feedparser',
+    'flask': 'flask',
     'pytz': 'pytz',
+    'gpiod': 'gpiod (needed for buttons)',
     'inky': 'inky (optional for non-Pi)',
 }
 

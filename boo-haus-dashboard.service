@@ -1,0 +1,19 @@
+[Unit]
+Description=Boo Haus Web Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mike
+WorkingDirectory=/home/mike/projects/boo_haus_display
+ExecStart=/usr/bin/python3 /home/mike/projects/boo_haus_display/web_dashboard.py
+Restart=on-failure
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/home/mike/projects/boo_haus_display/.env
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

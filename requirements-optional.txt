@@ -1,0 +1,9 @@
+# Optional integrations.
+# Install only the groups you use, or install this full file on the Raspberry Pi.
+
+anthropic
+google-auth-httplib2
+google-auth-oauthlib
+google-api-python-client
+gpiod
+inky[rpi,example-depends]

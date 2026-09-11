@@ -2,195 +2,63 @@
 
 ## Button Layout
 
-The Inky Impression 7.3" has 4 tactile buttons on the left side (when viewing the display):
+The Inky Impression 7.3" has four tactile buttons on the left side when
+viewing the display:
 
-```
-┌─────────┐
-│    [A]  │ ← Top
-│    [B]  │
-│    [C]  │
-│    [D]  │ ← Bottom
-└─────────┘
+```text
++---------+
+|    [A]  |  Top
+|    [B]  |
+|    [C]  |
+|    [D]  |  Bottom
++---------+
 ```
 
 ## Button Functions
 
 ### Button A - Previous Screen
-**GPIO Pin:** 5
 
-Press Button A to navigate backward through your screens. If you're on the Weather screen and press A, you'll go to the Birthday screen (wrapping around the cycle).
+GPIO pin: BCM 5, physical pin 29
 
-**Example Use Cases:**
-- Quickly check the previous screen
-- Navigate back if you missed something
-- Browse screens manually instead of waiting for auto-cycle
+Press Button A to navigate backward through the enabled screens. Navigation
+wraps around from the first screen to the last screen.
 
 ### Button B - Next Screen
-**GPIO Pin:** 6
 
-Press Button B to navigate forward through your screens. This is the same direction as the automatic cycle, but happens immediately when pressed.
+GPIO pin: BCM 6, physical pin 31
 
-**Example Use Cases:**
-- Skip ahead to see the next screen
-- Manually control which screen is displayed
-- Quickly check all screens without waiting
+Press Button B to navigate forward through the enabled screens. This is the same
+direction as automatic cycling, but happens immediately.
 
 ### Button C - Pause/Resume Auto-Cycling
-**GPIO Pin:** 16
 
-Press Button C to pause automatic screen cycling. Press again to resume. When paused, a yellow "⏸ PAUSED" indicator appears in the top-right corner of the display.
+GPIO pin: BCM 16, physical pin 36
 
-**Example Use Cases:**
-- Pause on a screen you want to study (weather forecast, calendar events, etc.)
-- Stop cycling while you're near the display
-- Leave a specific screen visible for an extended period
-- Resume normal cycling when you're done
-
-**Visual Feedback:**
-- Paused: Yellow box with "⏸ PAUSED" text in top-right corner
-- Resumed: Indicator disappears, normal cycling resumes
+Press Button C to pause or resume automatic screen cycling. When paused, the
+current screen is refreshed and the pause indicator is shown if
+`buttons.show_pause_indicator` is enabled.
 
 ### Button D - Force Refresh
-**GPIO Pin:** 24
 
-Press Button D to immediately refresh the current screen with the latest data. This is useful when you know data has changed (weather update, new calendar event, etc.) and don't want to wait for the next cycle.
+GPIO pin: BCM 24, physical pin 18
 
-**Example Use Cases:**
-- Update weather after seeing a storm coming
-- Refresh news after knowing something important happened
-- Force calendar reload after adding a new event
-- Get latest NFL scores during game time
+Press Button D to immediately refresh the current screen. This is useful after a
+weather, news, calendar, or score update. Button D has a longer debounce window
+than the navigation buttons so display refresh activity is less likely to cause
+duplicate refreshes.
 
-## Setup Instructions
+## Configuration
 
-### 1. Install Required Library
+Disable buttons:
 
-On your Raspberry Pi:
-
-```bash
-pip3 install gpiod
-```
-
-### 2. Enable Button Functionality
-
-Edit `boo_haus_config.json`:
-
-```json
-{
-  "buttons": {
-    "enabled": true,
-    "show_pause_indicator": true
-  }
-}
-```
-
-### 3. Test Button Detection
-
-Run the standalone button test:
-
-```bash
-cd ~/boo_haus_display
-python3 button_handler.py
-```
-
-Press each button (A, B, C, D) and verify output like:
-```
-Button A pressed - Previous screen
-Button B pressed - Next screen
-Button C pressed - Pause/Resume
-Button D pressed - Force refresh
-```
-
-Press Ctrl+C to exit the test.
-
-### 4. Run Normal Display
-
-Start the display with button support:
-
-```bash
-python3 boo_haus_main.py --cycle
-```
-
-Buttons are now active! Try pressing them to control the display.
-
-## Troubleshooting
-
-### Buttons Not Working
-
-**Problem:** Pressing buttons has no effect
-
-**Solutions:**
-1. Check if `gpiod` is installed:
-   ```bash
-   python3 -c "import gpiod; print('gpiod available')"
-   ```
-
-2. Check if buttons are enabled in config:
-   ```bash
-   cat boo_haus_config.json | grep -A 5 "buttons"
-   ```
-
-3. Check logs for button-related errors:
-   ```bash
-   tail -f logs/display.log | grep -i button
-   ```
-
-4. Verify GPIO permissions (may need to add user to `gpio` group):
-   ```bash
-   sudo usermod -a -G gpio $USER
-   # Then logout and login again
-   ```
-
-### Button Test Shows "gpiod not available"
-
-**Problem:** `button_handler.py` test says gpiod not found
-
-**Solution:**
-```bash
-pip3 install gpiod
-# Or if that fails, try:
-pip3 install --user gpiod
-```
-
-### Pause Indicator Not Showing
-
-**Problem:** Button C pauses cycling but no yellow indicator appears
-
-**Solutions:**
-1. Check config setting:
-   ```json
-   "buttons": {
-     "show_pause_indicator": true
-   }
-   ```
-
-2. The indicator appears in the top-right corner - verify it's not being cut off
-
-3. Check logs to confirm pause state:
-   ```bash
-   tail logs/display.log | grep -i pause
-   ```
-
-### Wrong Button Does Wrong Action
-
-**Problem:** Button labels don't match actions (e.g., Button A goes forward instead of backward)
-
-**Solution:** The button positions are fixed by hardware. If they seem reversed, you may be looking at the display from the wrong orientation. Buttons should be on the LEFT side when viewing the display normally.
-
-## Configuration Options
-
-### Disable Buttons
-
-Edit `boo_haus_config.json`:
 ```json
 "buttons": {
   "enabled": false
 }
 ```
 
-### Hide Pause Indicator
+Hide the pause indicator:
 
-Edit `boo_haus_config.json`:
 ```json
 "buttons": {
   "enabled": true,
@@ -198,76 +66,58 @@ Edit `boo_haus_config.json`:
 }
 ```
 
-## Technical Details
+Button-triggered display feedback uses the normal update feedback setting:
 
-### GPIO Pin Mapping
-- Button A: BCM GPIO 5 (Physical Pin 29)
-- Button B: BCM GPIO 6 (Physical Pin 31)
-- Button C: BCM GPIO 16 (Physical Pin 36)
-- Button D: BCM GPIO 24 (Physical Pin 18)
-
-### Implementation
-- Uses `gpiod` (libgpiod Python bindings) for modern GPIO handling
-- Buttons configured with pull-up resistors
-- Falling-edge detection for button presses
-- Background thread monitors button events
-- Thread-safe callback system
-
-### Button Behavior
-- Buttons are **active** during `--cycle` mode
-- Buttons are **inactive** during `--once` mode (single update)
-- Buttons work immediately - no debouncing delay needed (hardware handles this)
-- Each button press logs to `logs/display.log`
-
-## Usage Tips
-
-1. **Pause Before Looking Closely**: Press Button C to pause when you want to read details on the current screen
-
-2. **Quick Browse**: Use Buttons A and B to quickly flip through all screens
-
-3. **Force Updates**: Use Button D before checking the display if you know important data changed
-
-4. **Resume and Walk Away**: Press Button C again when you're done to resume automatic cycling
-
-5. **Manual Mode**: Keep display paused and use A/B buttons to control it manually
-
-## Integration with Cron/Systemd
-
-Buttons work with both automation methods:
-
-**With Cron** (--once mode):
-- Buttons are NOT active during cron updates
-- To use buttons, run in --cycle mode instead
-
-**With Systemd** (--cycle mode):
-- Buttons are ALWAYS active
-- This is the recommended setup for button functionality
-
-To use buttons, prefer systemd service over cron:
-```bash
-sudo systemctl start boo-haus-display
+```json
+"display": {
+  "visual_feedback_on_update": true,
+  "visual_feedback_duration": 0.5
+}
 ```
 
-## Future Enhancements
+## Runtime Behavior
 
-Potential button customizations you could add:
+- Buttons are only started by `boo_haus_main.py --cycle`.
+- Buttons are inactive for `--once` and `--screen <name>` one-shot renders.
+- The handler uses the `gpiod` Python bindings and tries `/dev/gpiochip4` first,
+  then `/dev/gpiochip0`.
+- Buttons use falling-edge detection with pull-up bias.
+- Button A/B/C use a 0.5 second debounce window.
+- Button D uses a 2.0 second debounce window.
+- Each accepted button press is logged to `logs/display.log`.
 
-1. **Long Press Detection**: Different action if button held for 2+ seconds
-2. **Button Combinations**: Press A+B together for special action
-3. **Configurable Actions**: Change what each button does via config file
-4. **Screen Bookmarks**: Press button to save/jump to favorite screens
-5. **Brightness Control**: Use buttons to adjust e-ink refresh strength
+## Service Use
 
-See `button_handler.py` to implement custom button behaviors.
+The recommended way to keep buttons active on the e-ink display is to run the
+display service in cycle mode:
 
-## Support
+```bash
+sudo ./install_service.sh
+sudo systemctl status boo-haus-display
+```
 
-If buttons aren't working after following this guide:
+If the service is already installed, restart it after deploying code or config
+changes:
 
-1. Run the button test: `python3 button_handler.py`
-2. Check system logs: `tail -f logs/display.log`
-3. Verify hardware: Physical buttons should click when pressed
-4. Check permissions: User needs GPIO access
-5. Review CLAUDE.md for technical details
+```bash
+sudo systemctl restart boo-haus-display
+```
 
-Happy button pressing! 🔘
+Cron one-shot updates can still refresh the display, but they cannot keep a
+background GPIO monitoring thread alive between runs.
+
+## Manual Diagnostic
+
+Run this on the Raspberry Pi when checking GPIO hardware or permissions:
+
+```bash
+python3 test_buttons.py
+python3 test_buttons.py --duration 30
+```
+
+## Useful Extensions
+
+- Long press detection for secondary actions.
+- Configurable button actions.
+- A button shortcut to jump to a favorite screen.
+- A safe shutdown or reboot action with a confirmation gesture.

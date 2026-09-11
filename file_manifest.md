@@ -1,307 +1,135 @@
-# Boo Haus Display - Complete File Manifest
+# Boo Haus Display File Manifest
 
-## 📂 All Files You Need
+This is a quick map of the maintained project files. Use `README.md` for setup
+instructions and `CLAUDE.md` for current engineering context.
 
-### Core Application Files (3 files)
+## Core Runtime
 
-1. **boo_haus_main.py** (Main application)
-   - Orchestrates screen cycling
-   - Manages state and scheduling
-   - Handles automatic news scraper execution
-   - Entry point for all operations
+- `boo_haus_main.py` - display manager, screen cycling, state, buttons, Inky rendering, and scheduled news jobs.
+- `base_screen.py` - shared screen drawing, fonts, colors, header, wrapping, and alignment helpers.
+- `config.py` - loads example config, local config, `.env`, and config-driven runtime paths.
+- `base_fetcher.py` - shared fetcher cache, HTTP helpers, offline mode, user agent, and sanitized request errors.
+- `web_dashboard.py` - optional Flask dashboard for preview, logs, and screen requests.
+- `health_check.py` - local diagnostics for config, runtime files, caches, and data sources.
 
-2. **base_screen.py** (Base class for all screens)
-   - Common header with special date greetings
-   - Drawing utility methods
-   - Font and color management
-   - Layout helpers
+## Screens
 
-3. **boo_haus_config.json** (Configuration)
-   - Screen enable/disable settings
-   - API keys and credentials
-   - Special dates and greetings
-   - Timing and display settings
+- `screens/weather_screen.py` - weather, forecast, tides, water quality, and sewage status.
+- `screens/week_screen.py` - week number, forecast summary, bin collections, birthdays, and holidays.
+- `screens/nfl_screen.py` - NFL scores and schedules.
+- `screens/calendar_screen.py` - Google Calendar events.
+- `screens/news_screen.py` - summarized/raw/legacy news display.
+- `screens/birthday_screen.py` - upcoming birthdays.
+- `screens/status_screen.py` - system and data-source status.
+- `screens/__init__.py` - screen exports.
 
-### Screen Implementation Files (7 files in `screens/` directory)
+## Fetchers And Data Processing
 
-4. **screens/__init__.py** (Package initializer)
-   - Imports all screen classes
-   - Makes screens easy to import
+- `weather_fetcher.py` - OpenWeather One Call API fetcher.
+- `weather_data_utils.py` - weather payload normalization.
+- `weather_icon_utils.py` - weather icon filename and PNG helpers.
+- `tide_times.py` - BBC tide table scraping and caching.
+- `water_quality.py` - Environment Agency bathing water quality.
+- `direct_sewage_api.py` - sewage overflow alerts.
+- `bin_collections.py` - East Devon bin collection lookup.
+- `nfl_scores.py` - ESPN NFL scoreboard integration.
+- `calendar_fetcher.py` - Google Calendar API integration.
+- `birthday_fetcher.py` - configured local birthday JSON loader.
+- `news_config.py` - RSS source, digest, selector, and scraper settings.
+- `news_models.py` - story normalization, IDs, sorting, and display records.
+- `digest_detector.py` - digest article detection.
+- `digest_parsers.py` - digest article splitting.
+- `news_scraper.py` - RSS/story scraping and raw story database generation.
+- `news_summariser.py` - optional Anthropic summary generation.
+- `date_handler.py` - timezone-aware date parsing utilities for news cleanup.
 
-5. **screens/weather_screen.py** (Weather display)
-   - Current weather with icon
-   - Temperature, feels like, high/low
-   - Wind, UV, rain chance
-   - Tide times
-   - Water quality
-   - Sewage alerts
+## Compatibility CLIs And Helpers
 
-6. **screens/week_screen.py** (This week summary)
-   - 5-day weather forecast
-   - Upcoming bin collections
-   - Birthdays this week
-   - Holidays this week
+- `calendar_display.py` - compatibility wrapper around `CalendarScreen`.
+- `birthday_tracker.py` - compatibility wrapper around `BirthdayScreen`.
+- `add_birthday.py` - interactive birthday JSON editor.
+- `test_buttons.py` - manual button/GPIO check helper.
+- `check_rss_dates.py` - RSS date inspection helper.
 
-7. **screens/nfl_screen.py** (NFL scores)
-   - Current week's games
-   - Live scores and status
-   - Schedule for upcoming games
-   - Teams on bye
+## Configuration And Private Runtime Files
 
-8. **screens/calendar_screen.py** (Calendar events)
-   - Google Calendar integration
-   - Upcoming events
-   - Color-coded by urgency
-   - All-day and timed events
+Committed templates:
 
-9. **screens/news_screen.py** (News summaries)
-   - Displays cached news stories
-   - Cycles through headlines
-   - Shows 4-5 stories per screen
-   - Automatically rotates
+- `boo_haus_config.example.json`
+- `.env.example`
+- `birthdays.example.json`
+- `requirements.txt`
+- `requirements-optional.txt`
 
-10. **screens/birthday_screen.py** (Birthday tracker)
-    - Next 12 birthdays
-    - Color-coded by proximity
-    - Days until each birthday
-    - Two-column layout
+Private local files that should stay ignored:
 
-### Data Files (2 files)
+- `.env` - simple API keys such as `OPENWEATHER_API_KEY` and `ANTHROPIC_API_KEY`.
+- `boo_haus_config.json` - local display, location, and screen settings.
+- `credentials.json` - Google Calendar OAuth client JSON.
+- `token.json` - Google Calendar OAuth token generated/refreshed by the client library.
+- `birthdays.json` - personal birthday data.
 
-11. **birthdays.json** (Birthday data)
-    ```json
-    [
-      {"name": "Alice", "month": 6, "day": 29},
-      {"name": "Rosie", "month": 10, "day": 22}
-    ]
-    ```
+Generated runtime files that should stay ignored:
 
-12. **credentials.json** (Google Calendar - optional)
-    - Download from Google Cloud Console
-    - Only needed if using calendar screen
+- `display_state.json`
+- `news_display_state.json`
+- `combined_news_recent.json`
+- `news_stories.json`
+- `news_summaries.json`
+- `headline_summaries_cache.json`
+- `*_cache.json`
+- `waste_collections.json`
+- `display_images/`
+- `logs/`
+- `backups/`
 
-### Your Existing Data Fetcher Scripts (keep all of these)
+## Installation And Services
 
-13. **weather_fetcher.py** - Fetches weather from OpenWeather API
-14. **bin_collections.py** - Gets bin collection schedule
-15. **tide_times.py** - Scrapes tide data from BBC
-16. **water_quality.py** - Beach water quality from Environment Agency
-17. **direct_sewage_api.py** - Sewage overflow alerts
-18. **nfl_scores.py** - NFL game data from ESPN API
-19. **calendar_display.py** - Google Calendar integration
-20. **news_display.py** - News display formatting
-21. **news_scraper.py** - Scrapes news from RSS feeds
-22. **news_summariser.py** - Generates news summaries
-23. **birthday_tracker.py** - Birthday display formatting
+- `quick_start.sh` - interactive local setup script.
+- `install_all_deps.sh` - dependency installer with optional integration prompts.
+- `install_service.sh` - systemd service installer; use `--dashboard` for the dashboard service and `--no-start` to avoid starting immediately.
+- `boo-haus-display.service` - display service template.
+- `boo-haus-dashboard.service` - dashboard service template.
+- `systemd_service.txt` - example service file using placeholders.
+- `SERVICE_GUIDE.md` - service install, restart, logging, and uninstall guide.
+- `DEPLOYMENT_CHECKLIST.md` - safe Pi update checklist that preserves local secrets and runtime data.
+- `installation_guide.md` - deprecated pointer to current setup docs.
 
-### Auto-Generated Files (don't create these manually)
+## Documentation
 
-24. **display_state.json** - Tracks current screen position
-25. **news_display_state.json** - Tracks news story position
-26. **token.json** - Google Calendar authentication token
-27. **headline_summaries_cache.json** - News cache (generated by news_scraper.py)
-28. **logs/** directory - Log files
-29. **display_images/** directory - Saved screen images
+- `README.md` - current setup and operation guide.
+- `BUTTON_GUIDE.md` - Inky button behavior and service notes.
+- `CLAUDE.md` - current context for coding agents.
+- `DEPLOYMENT_CHECKLIST.md` - deployment checklist for updating the Pi checkout.
+- `GEMINI.md` - compact project overview for Gemini-style agents.
+- `project_summary.md` - deprecated pointer to `README.md`.
 
-## 🎯 Quick Command Reference
+## Tests
 
-### Display Commands
+- `test_config_handling.py`
+- `test_backup_restore.py`
+- `test_fetcher_behaviour.py`
+- `test_news_pipeline.py`
+- `test_runtime_behaviour.py`
+- `test_runtime_edge_cases.py`
+- `test_screen_fixtures.py`
+- `test_health_check.py`
+- `test_service_install_files.py`
+- `test_display.py`
+- `test_digest_detection.py`
 
-```bash
-# Display next screen once
-python3 boo_haus_main.py --once
-
-# Display specific screen
-python3 boo_haus_main.py --screen weather
-python3 boo_haus_main.py --screen week
-python3 boo_haus_main.py --screen nfl
-python3 boo_haus_main.py --screen calendar
-python3 boo_haus_main.py --screen news
-python3 boo_haus_main.py --screen birthday
-
-# Run continuous cycling
-python3 boo_haus_main.py --cycle
-
-# Use custom config file
-python3 boo_haus_main.py --config my_config.json --once
-```
-
-### Data Fetcher Testing
+Useful local check:
 
 ```bash
-# Test each data source
-python3 weather_fetcher.py
-python3 bin_collections.py
-python3 tide_times.py
-python3 water_quality.py
-python3 direct_sewage_api.py
-python3 nfl_scores.py
-
-# Test news system
-python3 news_scraper.py
-python3 news_summariser.py
+python3 test_config_handling.py
+python3 test_backup_restore.py
+python3 test_fetcher_behaviour.py
+python3 test_news_pipeline.py
+python3 test_runtime_behaviour.py
+python3 test_runtime_edge_cases.py
+python3 test_screen_fixtures.py
+python3 test_health_check.py
+python3 test_service_install_files.py
+python3 test_display.py --quick
+bash -n install_service.sh quick_start.sh install_all_deps.sh
 ```
-
-### Monitoring Commands
-
-```bash
-# View logs
-tail -f logs/display.log
-tail -f logs/scraper.log
-tail -f logs/summariser.log
-
-# Check status
-cat display_state.json
-ls -lht display_images/ | head -5
-
-# Service status (if using systemd)
-sudo systemctl status boo-haus-display
-sudo journalctl -u boo-haus-display -f
-```
-
-### Cron Setup
-
-```bash
-# Edit crontab
-crontab -e
-
-# Add these lines:
-*/5 * * * * cd /home/pi/boo_haus_display && /usr/bin/python3 boo_haus_main.py --once >> logs/display.log 2>&1
-0 3 * * * cd /home/pi/boo_haus_display && /usr/bin/python3 news_scraper.py >> logs/scraper.log 2>&1
-30 3 * * * cd /home/pi/boo_haus_display && /usr/bin/python3 news_summariser.py >> logs/summariser.log 2>&1
-```
-
-## 🔧 Configuration Quick Reference
-
-### Enable/Disable Screens
-
-Edit `boo_haus_config.json`:
-
-```json
-"screens": {
-  "weather": {"enabled": true},
-  "week": {"enabled": true},
-  "nfl": {"enabled": false},      // Disable NFL
-  "calendar": {"enabled": true},
-  "news": {"enabled": true},
-  "birthday": {"enabled": true}
-}
-```
-
-### Change Update Frequency
-
-```json
-"cycle_interval_seconds": 300  // 5 minutes
-```
-
-Options:
-- 180 = 3 minutes
-- 300 = 5 minutes (default)
-- 600 = 10 minutes
-- 900 = 15 minutes
-
-### Special Dates Format
-
-```json
-"special_dates": {
-  "DD-MM": "Greeting message",
-  "25-12": "Merry Christmas!",
-  "01-01": "Happy New Year!"
-}
-```
-
-## 📊 File Size Reference
-
-Approximate sizes:
-
-- **boo_haus_main.py**: ~15 KB
-- **base_screen.py**: ~10 KB
-- **Each screen file**: ~8-12 KB
-- **boo_haus_config.json**: ~1 KB
-- **birthdays.json**: <1 KB
-- **Saved screen images**: ~50-100 KB each
-- **Log files**: Varies (rotate weekly)
-
-## 🎨 Customization Points
-
-### Add a New Screen
-
-1. Create `screens/my_screen.py`
-2. Inherit from `BaseScreen`
-3. Implement `name` property and `render_content()` method
-4. Import in `screens/__init__.py`
-5. Add to screen list in `boo_haus_main.py`
-6. Add config section in `boo_haus_config.json`
-
-### Change Header Appearance
-
-Edit `base_screen.py`, find `draw_header()` method.
-
-### Change Colors
-
-Edit `base_screen.py`, modify color constants at top of class.
-
-### Change Fonts
-
-Edit `base_screen.py`, modify `_load_font()` method or font paths.
-
-## ✅ Installation Checklist
-
-- [ ] All 23 files copied to correct locations
-- [ ] Python dependencies installed
-- [ ] `boo_haus_config.json` edited with API keys
-- [ ] `birthdays.json` filled with family birthdays
-- [ ] All data fetchers tested individually
-- [ ] Each screen tested individually
-- [ ] Cycle tested manually
-- [ ] Cron job or systemd service configured
-- [ ] Display updating automatically
-- [ ] News scraper running nightly
-
-## 🆘 Common Issues & Solutions
-
-### "ModuleNotFoundError: No module named 'screens'"
-
-**Solution**: You're not running from the correct directory
-```bash
-cd ~/boo_haus_display
-python3 boo_haus_main.py --once
-```
-
-### "FileNotFoundError: [Errno 2] No such file or directory: 'boo_haus_config.json'"
-
-**Solution**: Config file missing or wrong directory
-```bash
-cd ~/boo_haus_display
-ls -l boo_haus_config.json  # Check it exists
-```
-
-### Display shows only errors
-
-**Solution**: Test individual components
-```bash
-python3 weather_fetcher.py
-python3 bin_collections.py
-# Fix the failing component first
-```
-
-### Inky display not updating
-
-**Solution**: Check Inky library and I2C
-```bash
-python3 -c "from inky.auto import auto; print('OK')"
-sudo raspi-config  # Enable I2C
-```
-
-## 📖 Where to Learn More
-
-- **base_screen.py**: Available utility methods
-- **INSTALLATION_GUIDE.md**: Detailed setup instructions
-- **README.md**: Complete documentation
-- **boo_haus_config.json**: All configuration options
-
-## 🎉 You Have Everything!
-
-All the files above work together to create your complete display system. Each file has a specific purpose and they're all designed to work together seamlessly.
-
-Start with the INSTALLATION_GUIDE.md for step-by-step setup, then use this manifest as a reference for what each file does.

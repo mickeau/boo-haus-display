@@ -1,0 +1,6 @@
+pillow
+requests
+beautifulsoup4
+feedparser
+pytz
+flask

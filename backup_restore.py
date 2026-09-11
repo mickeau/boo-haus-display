@@ -12,16 +12,46 @@ from datetime import datetime
 from pathlib import Path
 import logging
 
+from config import config
+
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 
 class BackupManager:
     """Manage backups of the display system"""
-    
+
     def __init__(self, backup_dir='backups'):
-        self.backup_dir = Path(backup_dir)
+        self.project_root = config.project_root
+        self.backup_dir = config.resolve_path(backup_dir)
         self.backup_dir.mkdir(exist_ok=True)
+
+    def _relative_path(self, path):
+        path = Path(path)
+        return path if path.is_absolute() else self.project_root / path
+
+    def _add_file(self, tar, path, arcname):
+        path = self._relative_path(path)
+        if path.exists():
+            tar.add(path, arcname=arcname)
+            logger.info(f"  ✓ Added: {arcname}")
+        else:
+            logger.info(f"  ⊘ Skipped: {arcname} (not found)")
+
+    def _safe_tar_members(self, tar):
+        """Reject archive members that would write outside the project root."""
+        root = self.project_root.resolve()
+        safe_members = []
+
+        for member in tar.getmembers():
+            target = (root / member.name).resolve()
+            if target != root and root not in target.parents:
+                raise ValueError(f"Unsafe backup member path: {member.name}")
+            if member.issym() or member.islnk() or member.isdev():
+                raise ValueError(f"Unsupported backup member type: {member.name}")
+            safe_members.append(member)
+
+        return safe_members
     
     def create_backup(self, include_images=False, include_logs=False):
         """Create a backup of important files"""
@@ -34,13 +64,15 @@ class BackupManager:
         
         # Files to backup
         files_to_backup = [
-            'boo_haus_config.json',
-            'birthdays.json',
-            'display_state.json',
-            'news_display_state.json',
-            'headline_summaries_cache.json',
-            'credentials.json',  # Google Calendar credentials
-            'token.json',  # Google Calendar token
+            (config.config_file, config.config_file),
+            (config.get('screens.birthday.birthday_file', 'birthdays.json'), 'birthdays.json'),
+            (config.get('state_file', 'display_state.json'), 'display_state.json'),
+            (config.get('screens.news.state_file', 'news_display_state.json'), 'news_display_state.json'),
+            (config.get('screens.news.raw_story_file', 'combined_news_recent.json'), 'combined_news_recent.json'),
+            (config.get('screens.news.story_file', 'news_stories.json'), 'news_stories.json'),
+            (config.get('screens.news.cache_file', 'headline_summaries_cache.json'), 'headline_summaries_cache.json'),
+            (config.get('screens.calendar.credentials_file', 'credentials.json'), 'credentials.json'),
+            (config.get('screens.calendar.token_file', 'token.json'), 'token.json'),
         ]
         
         # Directories to backup
@@ -55,17 +87,14 @@ class BackupManager:
         try:
             with tarfile.open(backup_path, 'w:gz') as tar:
                 # Add files
-                for file in files_to_backup:
-                    if os.path.exists(file):
-                        tar.add(file)
-                        logger.info(f"  ✓ Added: {file}")
-                    else:
-                        logger.info(f"  ⊘ Skipped: {file} (not found)")
-                
+                for file, arcname in files_to_backup:
+                    self._add_file(tar, file, arcname)
+
                 # Add directories
                 for dir_name in dirs_to_backup:
-                    if os.path.isdir(dir_name):
-                        tar.add(dir_name)
+                    path = self._relative_path(dir_name)
+                    if path.is_dir():
+                        tar.add(path, arcname=dir_name)
                         logger.info(f"  ✓ Added: {dir_name}/")
             
             # Get backup size
@@ -148,7 +177,7 @@ class BackupManager:
         
         return backup_info
     
-    def restore_backup(self, backup_file, dry_run=False):
+    def restore_backup(self, backup_file, dry_run=False, confirm=True):
         """Restore from a backup file"""
         backup_path = Path(backup_file)
         
@@ -159,7 +188,7 @@ class BackupManager:
         logger.info(f"{'[DRY RUN] ' if dry_run else ''}Restoring from: {backup_path}")
         
         # Warn about overwriting
-        if not dry_run:
+        if not dry_run and confirm:
             response = input("\n⚠️  This will overwrite existing files. Continue? (yes/no): ")
             if response.lower() != 'yes':
                 logger.info("Restore cancelled")
@@ -167,14 +196,14 @@ class BackupManager:
         
         try:
             with tarfile.open(backup_path, 'r:gz') as tar:
-                members = tar.getmembers()
+                members = self._safe_tar_members(tar)
                 
                 logger.info(f"\nFiles to restore:")
                 for member in members:
                     logger.info(f"  {'[would restore]' if dry_run else '✓'} {member.name}")
                 
                 if not dry_run:
-                    tar.extractall()
+                    tar.extractall(path=self.project_root, members=members)
                     logger.info(f"\n✅ Restore completed successfully!")
                 else:
                     logger.info(f"\n✓ Dry run complete - no files were changed")

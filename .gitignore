@@ -1,26 +1,27 @@
-# ===================================
-# Boo Haus Display - Git Ignore File
-# ===================================
+# Boo Haus Display local/runtime files
 
-# Credentials and API Keys
+# Credentials and API keys
 credentials.json
 token.json
 boo_haus_config.json
+.env
 
-# Personal/Sensitive Data
+# Personal/sensitive local data
 birthdays.json
+waste_collections.json
+backups/
 
-# Runtime Generated Files
+# Runtime state, caches, and generated news data
 display_state.json
 news_display_state.json
-
-# Cache and Data Files
 combined_news_recent.json
 headline_summaries_cache.json
+news_stories.json
 news_summaries.json
+*_cache.json
 *.cache
 
-# Generated Images
+# Generated display images
 display_images/
 *.png
 *.jpg
@@ -30,7 +31,7 @@ display_images/
 logs/
 *.log
 
-# Python Cache
+# Python cache/build output
 __pycache__/
 *.py[cod]
 *$py.class
@@ -52,13 +53,13 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environments
+# Virtual environments
 venv/
 env/
 ENV/
-.venv
+.venv/
 
-# IDE and Editor Files
+# IDE and editor files
 .vscode/
 .idea/
 *.swp
@@ -68,7 +69,7 @@ ENV/
 .pydevproject
 .settings/
 
-# OS Files
+# OS files
 .DS_Store
 .DS_Store?
 ._*
@@ -78,12 +79,8 @@ ehthumbs.db
 Thumbs.db
 Desktop.ini
 
-# Temporary Files
+# Temporary files
 *.tmp
 *.temp
 *.bak
 *.backup
-
-# Test Files (optional - uncomment if you don't want to track test outputs)
-# test_output/
-# test_results/

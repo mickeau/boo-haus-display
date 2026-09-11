@@ -1,16 +1,19 @@
 [Unit]
 Description=Boo Haus Admin Display
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/boo_haus_display
-ExecStart=/usr/bin/python3 /home/pi/boo_haus_display/boo_haus_main.py --cycle
-Restart=always
+User=mike
+WorkingDirectory=/home/mike/projects/boo_haus_display
+ExecStart=/usr/bin/python3 /home/mike/projects/boo_haus_display/boo_haus_main.py --cycle
+Restart=on-failure
 RestartSec=10
-StandardOutput=append:/home/pi/boo_haus_display/logs/display.log
-StandardError=append:/home/pi/boo_haus_display/logs/error.log
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/home/mike/projects/boo_haus_display/.env
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

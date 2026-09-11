@@ -2,6 +2,8 @@
 # Save as: /etc/systemd/system/boo-haus-display.service
 #
 # Installation:
+#   Prefer: sudo ./install_service.sh
+#   Or copy this file after editing User/WorkingDirectory/ExecStart:
 #   sudo cp boo-haus-display.service /etc/systemd/system/
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable boo-haus-display
@@ -15,36 +17,36 @@
 
 [Unit]
 Description=Boo Haus Admin Display System
-Documentation=https://github.com/yourusername/boo-haus-display
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/boo_haus_display
+User=YOUR_USER
+Group=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/boo_haus_display
 
 # Main command - continuous cycling
-ExecStart=/usr/bin/python3 /home/pi/boo_haus_display/boo_haus_main.py --cycle
+ExecStart=/usr/bin/python3 /home/YOUR_USER/boo_haus_display/boo_haus_main.py --cycle
 
 # Restart policy
-Restart=always
+Restart=on-failure
 RestartSec=10
 
-# Logging
-StandardOutput=append:/home/pi/boo_haus_display/logs/display.log
-StandardError=append:/home/pi/boo_haus_display/logs/error.log
-
 # Environment
-Environment="PYTHONUNBUFFERED=1"
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/home/YOUR_USER/boo_haus_display/.env
+
+# Logging
+StandardOutput=journal
+StandardError=journal
 
 # Security
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/pi/boo_haus_display
+ReadWritePaths=/home/YOUR_USER/boo_haus_display
 
 # Resource limits (optional)
 MemoryMax=512M
