@@ -386,6 +386,9 @@ def test_nfl_screen_fixture_render():
     from screens.nfl_screen import NFLScreen
 
     class FakeNFLWeeklyDisplay:
+        def is_stale(self):
+            return False
+
         def get_games_list(self, format_type='inky'):
             game_time = datetime.now(timezone.utc) + timedelta(days=2)
             return "Week 1", [
@@ -410,6 +413,45 @@ def test_nfl_screen_fixture_render():
     assert_text_seen(recorder, "NFL Week 1")
     assert_text_seen(recorder, "Miami Dolphins (1-0)")
     assert_text_seen(recorder, "Chiefs")
+
+
+def test_nfl_screen_says_when_data_is_out_of_date():
+    from screens.nfl_screen import NFLScreen
+
+    # A failed refresh falls back to last week's cache, which filters down to no
+    # games for the current week. That must not read as "no games this week".
+    class StaleNFLWeeklyDisplay:
+        def is_stale(self):
+            return True
+
+        def last_updated(self):
+            return datetime(2026, 10, 18, 14, 2)
+
+        def get_games_list(self, format_type='inky'):
+            return "Week 6", [], []
+
+    with patch('nfl_scores.NFLWeeklyDisplay', StaleNFLWeeklyDisplay):
+        screen = NFLScreen()
+        recorder = attach_recorder(screen)
+        screen.render_content()
+
+    assert_text_seen(recorder, "Not updated since Sun 18 Oct 14:02")
+    assert_text_seen(recorder, "can't be refreshed")
+    assert_true(not any("No games found" in t for t in recorder.texts),
+                "stale NFL data must not claim there are no games")
+
+
+def test_calendar_hides_events_that_have_ended():
+    from screens.calendar_screen import CalendarScreen
+
+    now = datetime(2026, 10, 27, 12, 0, tzinfo=timezone.utc)
+    ended = CalendarScreen.event_has_ended
+    assert_true(ended({'end': {'dateTime': '2026-10-27T11:00:00Z'}}, now), "timed event this morning has ended")
+    assert_true(not ended({'end': {'dateTime': '2026-10-27T13:00:00+00:00'}}, now), "timed event this afternoon has not")
+    # All-day end dates are exclusive: a one-day event on the 26th ends on the 27th.
+    assert_true(ended({'end': {'date': '2026-10-27'}}, now), "yesterday's all-day event has ended")
+    assert_true(not ended({'end': {'date': '2026-10-28'}}, now), "today's all-day event has not")
+    assert_true(not ended({}, now), "an event with no end is kept")
 
 
 def test_nfl_screen_skips_malformed_games():
@@ -483,6 +525,8 @@ def main():
         test_birthday_screen_fixture_render,
         test_nfl_screen_fixture_render,
         test_nfl_screen_skips_malformed_games,
+        test_nfl_screen_says_when_data_is_out_of_date,
+        test_calendar_hides_events_that_have_ended,
         test_status_screen_fixture_render,
         test_shared_weather_icon_mapping,
     ]

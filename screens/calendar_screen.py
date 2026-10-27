@@ -9,6 +9,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from base_screen import BaseScreen
+from datetime import date, datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -48,12 +49,16 @@ class CalendarScreen(BaseScreen):
 
             # Get calendar events
             events = self.get_calendar_events()
+            self.draw_stale_note(self.calendar_fetcher, y)
 
             if not events:
                 self.draw.text((x, current_y), "No upcoming events",
                              font=self.font_medium, fill=self.BLACK)
-                self.draw.text((x, current_y + 30),
-                             self.calendar_error or "Check Google Calendar authentication",
+                if self.calendar_fetcher is not None and self.calendar_fetcher.is_stale():
+                    hint = "Calendar can't be refreshed — check the internet connection"
+                else:
+                    hint = self.calendar_error or "Check Google Calendar authentication"
+                self.draw.text((x, current_y + 30), hint,
                              font=self.font_tiny, fill=self.RED)
                 return
 
@@ -199,6 +204,20 @@ class CalendarScreen(BaseScreen):
 
         return current_y
 
+    @staticmethod
+    def event_has_ended(event, now):
+        """True if a raw Google Calendar event finished before now. An all-day
+        event's end date is exclusive, so it has ended once that date arrives."""
+        end = event.get('end') or {}
+        if end.get('dateTime'):
+            end_time = datetime.fromisoformat(end['dateTime'].replace('Z', '+00:00'))
+            if end_time.tzinfo is None:
+                end_time = end_time.replace(tzinfo=timezone.utc)
+            return end_time <= now
+        if end.get('date'):
+            return date.fromisoformat(end['date']) <= now.astimezone().date()
+        return False
+
     def remove_emoji(self, text):
         """Remove emoji characters from text"""
         import re
@@ -250,8 +269,13 @@ class CalendarScreen(BaseScreen):
 
             # Format for display
             formatted_events = []
+            now = datetime.now(timezone.utc)
             for event in events:
                 try:
+                    # Cached events can be days old when refreshes fail; never
+                    # show something that has already finished.
+                    if self.event_has_ended(event, now):
+                        continue
                     formatted = self.calendar_fetcher.format_event_for_display(event)
                     formatted_events.append(formatted)
                 except (KeyError, TypeError, ValueError) as e:

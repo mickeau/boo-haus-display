@@ -62,10 +62,16 @@ class NFLScreen(BaseScreen):
 
             # Title with week number
             current_y = self.draw_section_title(f"NFL {week_label}", y)
+            stale = self.draw_stale_note(nfl, y)
 
             if not games:
-                self.draw.text((x, current_y), "No games found for this week",
-                             font=self.font_medium, fill=self.BLACK)
+                # Old cached data filters down to nothing for the current week,
+                # so "no games" would be misleading — say the data is old instead.
+                message = ("NFL scores can't be refreshed — check the internet connection"
+                           if stale else "No games found for this week")
+                self.draw.text((x, current_y), message,
+                             font=self.font_medium if not stale else self.font_small,
+                             fill=self.RED if stale else self.BLACK)
                 return
 
             # Calculate layout

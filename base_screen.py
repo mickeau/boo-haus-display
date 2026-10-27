@@ -189,6 +189,20 @@ class BaseScreen(ABC):
 
         return line_y + 10
 
+    def draw_stale_note(self, fetcher, title_y: int) -> bool:
+        """If fetcher's data is out of date, say so in red on the section title
+        line, right-aligned. Returns True when the note was drawn.
+
+        Fetchers fall back to their last cache when a refresh fails, which
+        otherwise looks exactly like current data on screen."""
+        if fetcher is None or not fetcher.is_stale():
+            return False
+        updated = fetcher.last_updated()
+        note = f"Not updated since {updated:%a %d %b %H:%M}" if updated else "Not updated"
+        self.draw_right_aligned_text(self.width - 15, title_y + 8, note,
+                                     font=self.font_tiny, fill=self.RED)
+        return True
+
     def text_width(self, text: str, font: ImageFont.ImageFont) -> int:
         """Return rendered text width for the current drawing context."""
         bbox = self.draw.textbbox((0, 0), str(text), font=font)

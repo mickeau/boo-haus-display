@@ -159,6 +159,21 @@ class BaseFetcher(ABC):
         except (OSError, TypeError) as e:
             logger.error(f"Error saving cache to {self.cache_file}: {e}")
 
+    def last_updated(self):
+        """When data was last fetched successfully, or None if never."""
+        timestamp = self._cache.get("timestamp") if isinstance(self._cache, dict) else None
+        if not timestamp:
+            return None
+        try:
+            return datetime.fromisoformat(str(timestamp))
+        except ValueError:
+            return None
+
+    def is_stale(self):
+        """True when what we hold is older than the cache expiry — i.e. the last
+        refresh failed and screens are showing fallback data."""
+        return not self._is_cache_valid(self._cache)
+
     def _has_stale_cache(self):
         """Check if we have any cached data at all, even if expired."""
         return isinstance(self._cache, dict) and self._cache.get("data") is not None
