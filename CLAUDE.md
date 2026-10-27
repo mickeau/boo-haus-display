@@ -108,6 +108,15 @@ display fetchers currently migrated to this path are weather, tides, NFL, water
 quality, sewage, and bin collections. The news RSS fetcher, article scraper,
 and digest parsers also use the shared helper.
 
+**Stale data is labelled, not hidden.** When a refresh fails, `BaseFetcher`
+falls back to its last cache, which used to look exactly like current data.
+`BaseFetcher.is_stale()` / `last_updated()` report it, and
+`BaseScreen.draw_stale_note(fetcher, title_y)` puts a red "Not updated since
+Sun 18 Oct 14:02" on the section title line. The NFL screen says it can't
+refresh instead of "No games found" (old cached games filter down to nothing for
+the current week), and the calendar never shows events that have already ended.
+Use `draw_stale_note` on any new network-backed screen.
+
 Fetcher source methods should return `None` for network, API, or parser
 failures so `BaseFetcher` can fall back to stale cache. Return an empty list or
 dict only when a successful response genuinely contains no data.
@@ -375,6 +384,14 @@ symlinks, hard links, and device entries.
   modified or untracked; do not revert unrelated changes.
 
 ## Known Remaining Review Targets
+
+- **Open (October 2026): the Pi loses its internet connection after a while and
+  only a reboot brings it back.** Every screen then shows its last cache — this
+  is what produced the long-past calendar events and "NFL Week 6 — no games".
+  Suspected Wi-Fi power saving. Not yet diagnosed: check
+  `journalctl -u boo-haus-display --since "3 days ago" | grep -E "failed|stale"`
+  for the failure type and `iw wlan0 get power_save` on the Pi. The stale-data
+  labels make it visible but don't fix it.
 
 These are good next audit/refactor targets:
 
